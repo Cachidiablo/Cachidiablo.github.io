@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>卷纸效果加入</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+</head>
+
+<style>
+    *{margin: 0;padding: 0;}
+    a{text-decoration: none;color: #fff;}
+    li{list-style: none;}
+    body,ul{font-size: 0.13rem;font-family: "微软雅黑";color: #fff;}
+
+    /*动画效果：给每张图片绝对定位，通过改变top和left*/
+    /*将li全部转成position:absolute之后，ul会塌陷，需设宽高*/
+    .imgWrap{overflow: auto;position: relative;width: 100%;height: 100%;}
+    .imgWrap li{width: 1rem;height: 1rem;border: 1px solid #b95549;float: left;
+        background-size: cover;box-sizing: border-box;
+        /*动画:一个问题 为什么一开始没有动画?transition必须在元素渲染完以后才会起效果*/
+        transition: left 0.5s,top 0.5s;}
+
+    .page{width: 100%;height: 100%;overflow: hidden;left:0;top:0;position: absolute;}
+    header,section,footer{width: 100%;}
+    header{height:0.5rem;background: #000;line-height: 0.5rem;text-align: center;
+        background: -webkit-linear-gradient(top,#292929,#1e1e1e);
+        background: linear-gradient(top,#292929,#1e1e1e);}
+    .btn{height: 0.25rem;width: 0.5rem;border: 1px solid #0d0d0d;position: absolute;top: 0.125rem;
+        line-height: 0.25rem;right:20px; border-radius:5px;
+        box-shadow: 0 0 3px #0d0d0d,inset 0 0 2px #232323;}
+    .btn:nth-of-type(1){left: 20px;display: none;}
+    .wrap{position: absolute;top:0.5rem;bottom: 0.6rem;background: rgba(0,0,0,0.71);overflow: auto;}
+    footer{height: 0.6rem;background: #000;position: absolute;left: 0;bottom: 0;
+        background: -webkit-linear-gradient(top,#292929,#1e1e1e);
+        background: linear-gradient(top,#292929,#1e1e1e);
+        line-height: 0.6rem;  }
+    footer a{text-align: center;width: 50%;float: left;box-sizing:border-box;}
+    footer a:nth-of-type(1){border-right: 1px solid #222222;}
+    footer a:nth-of-type(2){border-left: 1px solid #222222;}
+    footer a.active{background:-webkit-linear-gradient(top,#101010,#070707);border-color: #0e0e0e;}
+
+
+    .rubbish{width: 1.2rem;height: 1.2rem;background: url("recycle.png") no-repeat;background-size: cover;
+        position: absolute;left:calc(50% - 0.6rem);top:100%;background-size: cover;transition: top 0.5s;z-index: 3;}
+    .rubbish:nth-of-type(1){background-image: url("recycle2.png");z-index: 1;}
+
+    /*rem使用中，会出现小数问题，导致意外折行或背景裁剪*/
+
+    /*3D部分*/
+    .box{
+        width: 1rem;height: 1rem;
+        position: absolute;
+        background-size: cover;
+        /*3D效果*/
+        /*-webkit-perspective: 800px; */ /*景深*/
+        /*js中会将父级box也设置的有背景 */
+        /*将父元素的背景设置为 不显示*/
+        background: no-repeat -9999px 0;
+        z-index: 2;
+    }
+    /*层层嵌套，所以从左至右排列*/
+    .box div{
+        width: 0.1rem;height: 1rem;
+        position: absolute;left: 0.1rem;top: 0;
+        background: no-repeat;
+        /*不设置cover会按原图*/
+        background-size: cover;
+        /*这里背景是继承的，所以仅给最外层div设置背景，里面的div都是这个背景*/
+        background-image: inherit;
+        /*3D*/
+        -webkit-transform-style: preserve-3d;
+        /*-webkit-transform-origin:left bottom;*/
+        -webkit-transform-origin:left 1rem;
+        transform: translate3d(0, 0, 0);
+    }
+    /*选择父元素为#box元素的所有div元素。*/
+    .box>div{
+        left:0;
+    }
+
+    .box div.show{
+        /*圆筒状->上粗下细  rotateX(5deg); 缩的更紧:加大旋转角度rotateY(-60deg)*/
+        /* -webkit-transform: rotateY(-50deg) rotateX(5deg);*/
+        -webkit-transform: rotateY(-60deg) rotateX(5deg);
+    }
+    /*第一个divshow的时候往右边移动*/
+    .box>div.show{
+        -webkit-transform: rotateY(-60deg) rotate(5deg) translateX(1rem);
+    }
+
+    @-webkit-keyframes upAndDown {
+        0%{top: calc(100% - 0.45rem);}
+        50%{top: calc(100% - 0.3rem);}
+        100%{top: calc(100% - 0.45rem);}
+    }
+    .rubbishShow{animation: .3s upAndDown;}
+
+
+</style>
+
+
+<script>
+
+    /*获得模拟数据*/
+    var data=[];
+    /*添加至数组*/
+    for(var i=0;i<19;i++){
+        data[i]="img/pic ("+(i+1)+").png";
+    }
+    console.log(data);
+
+    /*显示图片*/
+    function showImg(data) {
+        var imgUl=document.getElementById("imgUl");
+        var html='';
+
+        for(var i=0;i<data.length;i++){
+            var string="background-image:url('"+data[i]+"');";
+            html+='<li style="'+string+'"></li>';
+        }
+        console.log(html);
+        imgUl.innerHTML=html;
+    }
+
+    window.onload=function () {
+        var showWidth=document.documentElement.clientWidth;
+        document.getElementsByTagName('html')[0].style.fontSize=showWidth/3+'px';
+        var aBtn=document.getElementsByClassName("btn");
+        var imgUl=document.getElementById("imgUl");
+        var aLis=imgUl.getElementsByTagName("li");
+        var rubbish=document.getElementsByClassName("rubbish");
+        var picBox=imgUl.getElementsByClassName("box");
+
+
+        //通过开关控制选择or取消
+        var btnOff=false;
+        showImg(data);
+        //要放在showImg下面，不然li还未生成
+
+        picPosition();
+
+        aBtn[1].addEventListener("touchend",fnSelect,false);
+        var removeLiIndex=[];
+
+        //点击选择按钮
+        function fnSelect(){
+            if(btnOff){
+                //如果btn为取消
+                /*
+                aBtn[1].innerHTML="选择";
+                for(var i=0;i<aLis.length;i++){
+                    aLis[i].style.opacity='1';
+                    aLis[i].removeEventListener("touchend",fnLiSelect,false);
+                }
+                aBtn[0].style.display="none";
+                removeLiIndex.length=0;
+                */
+
+                for(var i=0;i<aLis.length;i++){
+                    aLis[i].removeEventListener("touchend",fnLiSelect,false);
+                }
+
+                for(var i=0;i<removeLiIndex.length;i++){
+                    close3D(picBox[i],removeLiIndex[i]);
+                }
+                aBtn[1].innerHTML="选择";
+                aBtn[0].style.display="none";
+                removeLiIndex.length=0;
+
+            }
+            else{
+                //如果btn为选择
+                aBtn[1].innerHTML="取消";
+                for(var i=0;i<aLis.length;i++){
+                    aLis[i].index=i;
+                    aLis[i].addEventListener("touchend",fnLiSelect,false);
+                }
+            }
+            btnOff=!btnOff;
+        }
+
+        /*选择图片*/
+        function fnLiSelect() {
+            removeLiIndex.push(this.index);
+            this.style.opacity='0';
+            aBtn[0].style.display="block";
+            create3D(this);
+            rubbish[0].style.top=rubbish[1].style.top="calc(100% - 0.35rem)";
+            picFixed();
+        }
+
+        /*创建3D卷纸模型*/
+        /*传入参数：选中的li*/
+        function create3D(oLi) {
+            console.log(oLi);
+            var oDiv=document.createElement("div");
+            oDiv.className="box";
+            oDiv.style.left=oLi.index%3+'rem';
+            oDiv.style.top=Math.floor(oLi.index/3)+'rem';
+            /*oDiv里面的div继承了背景*/
+            oDiv.style.backgroundImage=oLi.style.backgroundImage;
+            /*backgroundImage生成的时候是在行间的*/
+            var text3D='<div>'+
+                '<div style="background-position: -0.1rem 0;">' +
+                '<div style="background-position: -0.2rem 0;">' +
+                '<div style="background-position: -0.3rem 0;">' +
+                '<div style="background-position: -0.4rem 0;">' +
+                '<div style="background-position: -0.5rem 0;">' +
+                '<div style="background-position: -0.6rem 0;">' +
+                '<div style="background-position: -0.7rem 0;">' +
+                '<div style="background-position: -0.8rem 0;">' +
+                '<div style="background-position: -0.9rem 0;"></div>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+            oDiv.innerHTML=text3D;
+            document.getElementById("imgUl").appendChild(oDiv);
+            /*图片资源加载完才会执行transition*/
+            setTimeout(function () {
+                show3D(oDiv);
+            },30);
+        }
+
+        /*卷纸特效-卷合*/
+        function show3D(obj) {
+            var oDiv=obj.getElementsByTagName("div");
+            for(var i=0;i<oDiv.length;i++){
+                oDiv[i].style.transition='0.5s';
+                oDiv[i].className='show';
+            }
+        }
+        /*卷纸特效-展开*/
+        /*obj 当前选中图形的3D卷纸图外盒子  index 当前选中的li的index*/
+        function close3D(obj,index) {
+            var oDiv=obj.getElementsByTagName("div");
+            /*给最后一个div加上事件*/
+            oDiv[oDiv.length-1].addEventListener("webkitTransitionEnd",fn,false);
+            for(var i=0;i<oDiv.length;i++){
+                oDiv[i].style.transition='0.5s';
+                oDiv[i].className='';
+            }
+            function fn() {
+                oDiv[oDiv.length-1].removeEventListener("webkitTransitionEnd",fn,false);
+                /*执行完transition之后再将li的透明度变回去*/
+                aLis[index].style.opacity='1';
+                /*将3D卷纸的box删除*/
+                imgUl.removeChild(obj);
+            }
+
+        }
+
+
+        aBtn[0].addEventListener("touchend",fnRemove,false);
+
+        /*删除图片*/
+        function fnRemove() {
+            removeLiIndex.sort(function (a,b) {
+                return a-b;
+            });
+            console.log(removeLiIndex);
+            /*while(removeLiIndex.length){
+                var p=removeLiIndex.pop();
+                //imgUl.removeChild(aLis[p]);
+                del3D(p);
+            }*/
+            for(var i=0;i<removeLiIndex.length;i++){
+                //删除最后一个并且返回最后一个的数值
+                //var p=removeLiIndex.pop();
+                del3D(i);
+            }
+            setTimeout(function () {
+                rubbish[0].className=rubbish[1].className="rubbish rubbishShow";
+                while(removeLiIndex.length){
+                     //这个要在removeLiIndex删除前删除
+                     console.log(picBox[removeLiIndex.length-1]);
+                     imgUl.removeChild(picBox[removeLiIndex.length-1]);
+                     var p=removeLiIndex.pop();
+                     imgUl.removeChild(aLis[p]);
+                 }
+                fnSelect();
+                picPosition();
+            },700);
+            setTimeout(function () {
+                rubbish[0].className=rubbish[1].className="rubbish";
+                rubbish[0].style.top=rubbish[1].style.top="calc(100% - 0.35rem)";
+            },1200);
+
+            //重新排列index顺序，并且返回到选择界面
+            //fnSelect();
+            //重新规划位置
+            //picPosition();
+
+        }
+
+        function picFixed() {
+            var delJZ=picBox[removeLiIndex.length-1];
+            var scrollTop=imgUl.scrollTop;
+            var top=delJZ.style.top;
+            delJZ.style.top="calc(("+top+" + 0.5rem) - "+scrollTop+"px)";
+            delJZ.style.position="fixed";
+        }
+        /*删除时的3D效果*/
+        function del3D(num) {
+            var delJZ=picBox[num];
+            var delLi=aLis[removeLiIndex[i]];
+            rubbish[0].style.top=rubbish[1].style.top="calc(100% - 0.45rem)";
+            delJZ.style.left="calc(50% - 0.5rem)";
+            delJZ.style.top="100%";
+            /*top延迟0.3s left结束再top*/
+            delJZ.style.transition="left 0.3s,top 0.5s 0.3s";
+        }
+
+        /*计算top left
+        第几张  top  left  (单位 rem)
+        0      0     0
+        1      0     1
+        2      0     2
+
+        3      1     0
+        4      1     1
+        5      1     2
+
+        */
+
+        /*重排index*/
+        function picPosition() {
+            for(var i=0;i<aLis.length;i++){
+                aLis[i].style.left=i%3+'rem';
+                //向下取整
+                aLis[i].style.top=Math.floor(i/3)+'rem';
+            }
+            for(var i=0;i<aLis.length;i++){
+                aLis[i].style.position="absolute";
+            }
+        }
+
+    }
+
+
+</script>
+
+<body>
+
+
+
+<!--定义文章-->
+<article class="page">
+    <header>
+        <a href="javascript:;" class="btn">删除</a>
+        我的相册
+        <a href="javascript:;" class="btn">选择</a>
+    </header>
+    <section class="wrap">
+        <ul class="imgWrap" id="imgUl">
+
+        </ul>
+    </section>
+    <footer>
+        <a href="javascript:;" class="active">我的相册</a>
+        <a href="javascript:;">所有相册</a>
+    </footer>
+    <!--垃圾桶-->
+    <span class="rubbish"></span>
+    <span class="rubbish"></span>
+</article>
+
+</body>
+</html>
